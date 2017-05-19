@@ -2,6 +2,7 @@ package com.berezin;
 
 import com.sun.jna.Pointer;
 
+import java.util.ArrayList;
 import java.util.Scanner;
 
 public class Main {
@@ -10,19 +11,25 @@ public class Main {
     public static void main(String[] args) {
         initCupsStuff();
         while (true) {
-            int item = promptInput();
-            if (item == 1) listSubscriptions();
-            else if (item == 2) startSubscription();
-            else if (item == 3) endSubscription();
-            else if (item == 4) break;
-            else System.out.println("Invalid input");
+            try {
+                int item = promptInput();
+                if (item == 1) listSubscriptions();
+                else if (item == 2) startSubscription();
+                else if (item == 3) endSubscription();
+                else if (item == 4) getState();
+                else if (item == 5) break;
+                else System.out.println("Invalid input");
+            } catch (Exception e) {
+                System.out.println("err");
+            }
         }
     }
     static int promptInput(){
         System.out.println("1: List active subscriptions");
-        System.out.println("2: Start subscription");;
+        System.out.println("2: Start subscription");
         System.out.println("3: End subscription");
-        System.out.println("4: Exit");
+        System.out.println("4: Get state");
+        System.out.println("5: Exit");
         Scanner s = new Scanner(System.in);
         return s.nextInt();
     }
@@ -49,6 +56,31 @@ public class Main {
                 System.getProperty("user.name"));
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
         parseResponse(response);
+    }
+    static ArrayList<String> listPrinters() {
+        ArrayList<String> list = new ArrayList<>();
+        Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("CUPS-Get-Printers"));
+
+        Cups.INSTANCE.ippAddString(request,
+                Cups.INSTANCE.ippTagValue("Operation"),
+                Cups.INSTANCE.ippTagValue("Name"),
+                "requesting-user-name",
+                "",
+                System.getProperty("user.name"));
+        Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
+        Pointer attr = Cups.INSTANCE.ippFindAttribute(response, "printer-state-reasons",
+                Cups.INSTANCE.ippTagValue("keyword"));
+
+        int counter = 1;
+        while (attr != Pointer.NULL) {
+            list.add(Cups.INSTANCE.ippGetString(attr, 0, ""));
+            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-name",
+                    Cups.INSTANCE.ippTagValue("Name"));
+            System.out.println(counter++ + ": " + Cups.INSTANCE.ippGetString(attr, 0, ""));
+            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-reasons",
+                    Cups.INSTANCE.ippTagValue("keyword"));
+        }
+        return list;
     }
     static void startSubscription() {
         System.out.println("Enter subscription uri e.g. rss://localhost:8000");
@@ -108,6 +140,17 @@ public class Main {
                 id);
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
         parseResponse(response);
+    }
+    static void getState(){
+        ArrayList<String> list = listPrinters();
+        System.out.println("Enter printer number");
+        Scanner s = new Scanner(System.in);
+        int id = s.nextInt();
+        if ((id > 0)&&(id <= list.size())) {
+            System.out.println(list.get(id - 1));
+        } else {
+            System.out.println("Input out of bounds");
+        }
     }
     static void parseResponse(Pointer response) {
         Pointer attr = Cups.INSTANCE.ippFirstAttribute(response);
