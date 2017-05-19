@@ -41,6 +41,12 @@ public class Main {
                 "printer-uri",
                 "",
                 "ipp://localhost:631/printers/");
+        Cups.INSTANCE.ippAddString(request,
+                Cups.INSTANCE.ippTagValue("Operation"),
+                Cups.INSTANCE.ippTagValue("Name"),
+                "requesting-user-name",
+                "",
+                System.getProperty("user.name"));
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
         parseResponse(response);
     }
@@ -56,6 +62,12 @@ public class Main {
                 "printer-uri",
                 "",
                 "ipp://localhost:631/");
+        Cups.INSTANCE.ippAddString(request,
+                Cups.INSTANCE.ippTagValue("Operation"),
+                Cups.INSTANCE.ippTagValue("Name"),
+                "requesting-user-name",
+                "",
+                System.getProperty("user.name"));
         Cups.INSTANCE.ippAddString(request,
                 Cups.INSTANCE.ippTagValue("Subscription"),
                 Cups.INSTANCE.ippTagValue("uri"),
@@ -83,6 +95,12 @@ public class Main {
                 "printer-uri",
                 "",
                 "ipp://localhost:631/");
+        Cups.INSTANCE.ippAddString(request,
+                Cups.INSTANCE.ippTagValue("Operation"),
+                Cups.INSTANCE.ippTagValue("Name"),
+                "requesting-user-name",
+                "",
+                System.getProperty("user.name"));
         Cups.INSTANCE.ippAddInteger(request,
                 Cups.INSTANCE.ippTagValue("Operation"),
                 Cups.INSTANCE.ippTagValue("Integer"),
