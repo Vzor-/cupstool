@@ -79,16 +79,18 @@ public class Main {
             message += "\nStatus Message: ";
             attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-message",
                     Cups.INSTANCE.ippTagValue("TextWithoutLanguage"));
-            message += Cups.INSTANCE.ippGetString(attr, 0, "");
+            message += parseAttr(attr);
 
             message += "\nStatus Reason: ";
             attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-reasons",
                     Cups.INSTANCE.ippTagValue("keyword"));
-            message += Cups.INSTANCE.ippGetString(attr, 0, "");
+            message += parseAttr(attr);
 
             attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-name",
                     Cups.INSTANCE.ippTagValue("Name"));
             System.out.println(counter++ + ": " + Cups.INSTANCE.ippGetString(attr, 0, ""));
+
+            //for next loop
             attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state",
                     Cups.INSTANCE.ippTagValue("enum"));
             list.add(message);
@@ -171,32 +173,34 @@ public class Main {
             if (attr == Pointer.NULL) {
                 break;
             }
-            int valueTag = Cups.INSTANCE.ippGetValueTag(attr);
-            int attrCount = Cups.INSTANCE.ippGetCount(attr);
-            String data = "";
-            String attrName = Cups.INSTANCE.ippGetName(attr);
-            for (int i = 0; i < attrCount; i++) {
-                if (valueTag == Cups.INSTANCE.ippTagValue("Integer")) {
-                    data += Cups.INSTANCE.ippGetInteger(attr, i);
-                } else if (valueTag == Cups.INSTANCE.ippTagValue("Boolean")) {
-                    data += (Cups.INSTANCE.ippGetInteger(attr, i) == 1);
-                } else if (valueTag == Cups.INSTANCE.ippTagValue("Enum")) {
-                    data += Cups.INSTANCE.ippEnumString(attrName, Cups.INSTANCE.ippGetInteger(attr, i));
-                } else {
-                    data += Cups.INSTANCE.ippGetString(attr, i, "");
-                }
-                if (i + 1 < attrCount) {
-                    data += ", ";
-                }
-            }
-
-            if (attrName == null){
-                System.out.println("------------------------");
-            } else {
-                System.out.printf("%s: %d %s {%s}\n", attrName, attrCount, Cups.INSTANCE.ippTagString(valueTag), data);
-            }
+            System.out.println(parseAttr(attr));
             attr = Cups.INSTANCE.ippNextAttribute(response);
         }
         System.out.println("------------------------");
+    }
+    static String parseAttr(Pointer attr){
+        int valueTag = Cups.INSTANCE.ippGetValueTag(attr);
+        int attrCount = Cups.INSTANCE.ippGetCount(attr);
+        String data = "";
+        String attrName = Cups.INSTANCE.ippGetName(attr);
+        for (int i = 0; i < attrCount; i++) {
+            if (valueTag == Cups.INSTANCE.ippTagValue("Integer")) {
+                data += Cups.INSTANCE.ippGetInteger(attr, i);
+            } else if (valueTag == Cups.INSTANCE.ippTagValue("Boolean")) {
+                data += (Cups.INSTANCE.ippGetInteger(attr, i) == 1);
+            } else if (valueTag == Cups.INSTANCE.ippTagValue("Enum")) {
+                data += Cups.INSTANCE.ippEnumString(attrName, Cups.INSTANCE.ippGetInteger(attr, i));
+            } else {
+                data += Cups.INSTANCE.ippGetString(attr, i, "");
+            }
+            if (i + 1 < attrCount) {
+                data += ", ";
+            }
+        }
+
+        if (attrName == null){
+            return "------------------------";
+        }
+        return String.format("%s: %d %s {%s}", attrName, attrCount, Cups.INSTANCE.ippTagString(valueTag), data);
     }
 }
