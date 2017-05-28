@@ -47,7 +47,7 @@ public class Main {
                 Cups.INSTANCE.ippTagValue("uri"),
                 "printer-uri",
                 "",
-                "ipp://localhost:631/printers/");
+                "ipp://localhost:" + Cups.INSTANCE.ippPort() + "/printers/");
         Cups.INSTANCE.ippAddString(request,
                 Cups.INSTANCE.ippTagValue("Operation"),
                 Cups.INSTANCE.ippTagValue("Name"),
@@ -57,7 +57,7 @@ public class Main {
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
         parseResponse(response);
     }
-    static ArrayList<String> listPrinters() {
+    static ArrayList<String> listPrinterStatus() {
         ArrayList<String> list = new ArrayList<>();
         Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("CUPS-Get-Printers"));
 
@@ -68,17 +68,30 @@ public class Main {
                 "",
                 System.getProperty("user.name"));
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
-        Pointer attr = Cups.INSTANCE.ippFindAttribute(response, "printer-state-reasons",
-                Cups.INSTANCE.ippTagValue("keyword"));
+        Pointer attr = Cups.INSTANCE.ippFindAttribute(response, "printer-state",
+                Cups.INSTANCE.ippTagValue("enum"));
 
         int counter = 1;
         while (attr != Pointer.NULL) {
-            list.add(Cups.INSTANCE.ippGetString(attr, 0, ""));
+            String message = "Status Enum: ";
+            message += Cups.INSTANCE.ippEnumString("printer-state", Cups.INSTANCE.ippGetInteger(attr, 0));
+
+            message += "\nStatus Message: ";
+            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-message",
+                    Cups.INSTANCE.ippTagValue("TextWithoutLanguage"));
+            message += Cups.INSTANCE.ippGetString(attr, 0, "");
+
+            message += "\nStatus Reason: ";
+            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-reasons",
+                    Cups.INSTANCE.ippTagValue("keyword"));
+            message += Cups.INSTANCE.ippGetString(attr, 0, "");
+
             attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-name",
                     Cups.INSTANCE.ippTagValue("Name"));
             System.out.println(counter++ + ": " + Cups.INSTANCE.ippGetString(attr, 0, ""));
-            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-reasons",
-                    Cups.INSTANCE.ippTagValue("keyword"));
+            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state",
+                    Cups.INSTANCE.ippTagValue("enum"));
+            list.add(message);
         }
         return list;
     }
@@ -93,7 +106,7 @@ public class Main {
                 Cups.INSTANCE.ippTagValue("uri"),
                 "printer-uri",
                 "",
-                "ipp://localhost:631/");
+                "ipp://localhost:" + Cups.INSTANCE.ippPort() + "/");
         Cups.INSTANCE.ippAddString(request,
                 Cups.INSTANCE.ippTagValue("Operation"),
                 Cups.INSTANCE.ippTagValue("Name"),
@@ -126,7 +139,7 @@ public class Main {
                 Cups.INSTANCE.ippTagValue("uri"),
                 "printer-uri",
                 "",
-                "ipp://localhost:631/");
+                "ipp://localhost:" + Cups.INSTANCE.ippPort() + "/");
         Cups.INSTANCE.ippAddString(request,
                 Cups.INSTANCE.ippTagValue("Operation"),
                 Cups.INSTANCE.ippTagValue("Name"),
@@ -142,7 +155,7 @@ public class Main {
         parseResponse(response);
     }
     static void getState(){
-        ArrayList<String> list = listPrinters();
+        ArrayList<String> list = listPrinterStatus();
         System.out.println("Enter printer number");
         Scanner s = new Scanner(System.in);
         int id = s.nextInt();
@@ -159,17 +172,28 @@ public class Main {
                 break;
             }
             int valueTag = Cups.INSTANCE.ippGetValueTag(attr);
-            String data = Cups.INSTANCE.ippTagString(valueTag);
+            int attrCount = Cups.INSTANCE.ippGetCount(attr);
+            String data = "";
             String attrName = Cups.INSTANCE.ippGetName(attr);
-            if (valueTag == Cups.INSTANCE.ippTagValue("Integer")) {
-                data = "" + Cups.INSTANCE.ippGetInteger(attr, 0);
-            } else {
-                data = Cups.INSTANCE.ippGetString(attr, 0, "");
+            for (int i = 0; i < attrCount; i++) {
+                if (valueTag == Cups.INSTANCE.ippTagValue("Integer")) {
+                    data += Cups.INSTANCE.ippGetInteger(attr, i);
+                } else if (valueTag == Cups.INSTANCE.ippTagValue("Boolean")) {
+                    data += (Cups.INSTANCE.ippGetInteger(attr, i) == 1);
+                } else if (valueTag == Cups.INSTANCE.ippTagValue("Enum")) {
+                    data += Cups.INSTANCE.ippEnumString(attrName, Cups.INSTANCE.ippGetInteger(attr, i));
+                } else {
+                    data += Cups.INSTANCE.ippGetString(attr, i, "");
+                }
+                if (i + 1 < attrCount) {
+                    data += ", ";
+                }
             }
+
             if (attrName == null){
                 System.out.println("------------------------");
             } else {
-                System.out.printf("%s: %s\n", attrName, data);
+                System.out.printf("%s: %d %s {%s}\n", attrName, attrCount, Cups.INSTANCE.ippTagString(valueTag), data);
             }
             attr = Cups.INSTANCE.ippNextAttribute(response);
         }

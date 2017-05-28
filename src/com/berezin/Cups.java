@@ -22,6 +22,7 @@ public interface Cups extends Library {
     String ippTagString(int tag);
     String ippGetName(Pointer attr);
     String ippGetString(Pointer attr, int element, String language);
+    String ippEnumString (String attrname, int enumvalue);
 
     int ippPort();
     int httpAssembleURI(int encoding, Memory uri, int urilen, String sceme, String username, String host, int port, String resourcef);
