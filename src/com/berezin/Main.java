@@ -1,6 +1,7 @@
 package com.berezin;
 
 import com.sun.jna.Pointer;
+import com.sun.jna.StringArray;
 
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -8,6 +9,7 @@ import java.util.Scanner;
 public class Main {
 
     static Pointer http;
+
     public static void main(String[] args) {
         initCupsStuff();
         while (true) {
@@ -16,29 +18,43 @@ public class Main {
                 if (item == 1) listSubscriptions();
                 else if (item == 2) startSubscription();
                 else if (item == 3) endSubscription();
-                else if (item == 4) getState();
-                else if (item == 5) break;
+                else if (item == 4) getPrinterState();
+                else if (item == 5) listJobs();
+                else if (item == 6) getJobInfo();
+                else if (item == 7) getDetailedPrinterInfo();
+                else if (item == 8) break;
                 else System.out.println("Invalid input");
             } catch (Exception e) {
                 System.out.println("err");
             }
         }
+        closeCupStuff();
     }
+
     static int promptInput(){
         System.out.println("1: List active subscriptions");
         System.out.println("2: Start subscription");
         System.out.println("3: End subscription");
-        System.out.println("4: Get state");
-        System.out.println("5: Exit");
+        System.out.println("4: Get printer state");
+        System.out.println("5: List jobs");
+        System.out.println("6: Get detailed job info");
+        System.out.println("7: Get detailed printer info");
+        System.out.println("8: Exit");
         Scanner s = new Scanner(System.in);
         return s.nextInt();
     }
+
     static void initCupsStuff() {
         http = Cups.INSTANCE.httpConnectEncrypt(
                 Cups.INSTANCE.cupsServer(),
                 Cups.INSTANCE.ippPort(),
                 Cups.INSTANCE.cupsEncryption());
     }
+
+    static void closeCupStuff() {
+        Cups.INSTANCE.httpClose(http);
+    }
+
     static void listSubscriptions() {
         Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("Get-Subscriptions"));
 
@@ -56,53 +72,58 @@ public class Main {
                 System.getProperty("user.name"));
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
         parseResponse(response);
+
+        Cups.INSTANCE.ippDelete(response);
     }
-    static ArrayList<String> listPrinterStatus() {
-        ArrayList<String> list = new ArrayList<>();
-        Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("CUPS-Get-Printers"));
 
-        Cups.INSTANCE.ippAddString(request,
-                Cups.INSTANCE.ippTagValue("Operation"),
-                Cups.INSTANCE.ippTagValue("Name"),
-                "requesting-user-name",
-                "",
-                System.getProperty("user.name"));
-        Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
-        Pointer attr = Cups.INSTANCE.ippFindAttribute(response, "printer-state",
-                Cups.INSTANCE.ippTagValue("enum"));
-
-        int counter = 1;
-        while (attr != Pointer.NULL) {
-            String message = "Status Enum: ";
-            message += Cups.INSTANCE.ippEnumString("printer-state", Cups.INSTANCE.ippGetInteger(attr, 0));
-
-            message += "\nStatus Message: ";
-            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-message",
-                    Cups.INSTANCE.ippTagValue("TextWithoutLanguage"));
-            message += parseAttr(attr);
-
-            message += "\nStatus Reason: ";
-            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-reasons",
-                    Cups.INSTANCE.ippTagValue("keyword"));
-            message += parseAttr(attr);
-
-            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-name",
-                    Cups.INSTANCE.ippTagValue("Name"));
-            System.out.println(counter++ + ": " + Cups.INSTANCE.ippGetString(attr, 0, ""));
-
-            //for next loop
-            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state",
-                    Cups.INSTANCE.ippTagValue("enum"));
-            list.add(message);
-        }
-        return list;
-    }
     static void startSubscription() {
-        System.out.println("Enter subscription uri e.g. rss://localhost:8000");
+        System.out.println("Enter subscription uri, or press enter for rss://localhost:8000");
         Scanner s = new Scanner(System.in);
-        String uri = s.next();
-        Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("Create-Printer-Subscription"));
+        String uri = s.nextLine();
+        if (uri == "") uri = "rss://localhost:8000";
 
+        System.out.println("Enter subscription type: \n" +
+                "1: Printer status\n" +
+                "2: Job status\n" +
+                "3: Both");
+        s = new Scanner(System.in);
+        int item = s.nextInt();
+
+        String[] stringArray;
+        if (item == 1) {
+            stringArray = new String[]{"printer-state-changed"};
+        } else if (item == 2) {
+            stringArray = new String[]{"job-state-changed"};
+        } else if (item == 3) {
+            stringArray = new String[]{"printer-state-changed", "job-state-changed"};
+        } else {
+            System.out.println("Invalid input");
+            return;
+        }
+        StringArray elements = new StringArray(stringArray);
+
+        Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("Create-Job-Subscription"));
+
+//      The above line is a helper function that does all of this for us
+//        Pointer request = Cups.INSTANCE.ippNew();
+//        Cups.INSTANCE.ippSetOperation(request, Cups.INSTANCE.ippOpValue("Create-Job-Subscription"));
+//        Cups.INSTANCE.ippSetRequestId(request, SomeRandomNumber);
+//        Cups.INSTANCE.ippAddString(request,
+//                Cups.INSTANCE.ippTagValue("Operation"),
+//                Cups.INSTANCE.ippTagValue("charset"),
+//                "attributes-charset",
+//                "",
+//                "utf-8"
+//        );
+//        Cups.INSTANCE.ippAddString(request,
+//                Cups.INSTANCE.ippTagValue("Operation"),
+//                Cups.INSTANCE.ippTagValue("naturalLanguage"),
+//                "attributes-natural-language",
+//                "",
+//                "en-us"
+//        );
+
+        // We listen to all printers.
         Cups.INSTANCE.ippAddString(request,
                 Cups.INSTANCE.ippTagValue("Operation"),
                 Cups.INSTANCE.ippTagValue("uri"),
@@ -121,19 +142,29 @@ public class Main {
                 "notify-recipient-uri",
                 "",
                 uri);
-        Cups.INSTANCE.ippAddString(request,
+        Cups.INSTANCE.ippAddStrings(request,
                 Cups.INSTANCE.ippTagValue("Subscription"),
                 Cups.INSTANCE.ippTagValue("Keyword"),
                 "notify-events",
+                stringArray.length,
                 "",
-                "printer-state-changed");
+                elements);
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
         parseResponse(response);
+
+        Cups.INSTANCE.ippDelete(response);
     }
+
     static void endSubscription() {
-        System.out.println("Enter subscription id, or -1 to cancel");
+        System.out.println("Enter subscription id, or enter to cancel");
         Scanner s = new Scanner(System.in);
-        int id = s.nextInt();
+        int id;
+        try {
+            id = Integer.parseInt(s.nextLine());
+        } catch (NumberFormatException e) {
+            return;
+        }
+
         Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("Cancel-Subscription"));
 
         Cups.INSTANCE.ippAddString(request,
@@ -155,18 +186,192 @@ public class Main {
                 id);
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
         parseResponse(response);
+
+        Cups.INSTANCE.ippDelete(response);
     }
-    static void getState(){
-        ArrayList<String> list = listPrinterStatus();
+
+    static void getPrinterState(){
+        ArrayList<String> list = getPrinterNameList();
+        displayList(list);
         System.out.println("Enter printer number");
         Scanner s = new Scanner(System.in);
         int id = s.nextInt();
         if ((id > 0)&&(id <= list.size())) {
-            System.out.println(list.get(id - 1));
+            Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("CUPS-Get-Printers"));
+
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("Name"),
+                    "requesting-user-name",
+                    "",
+                    System.getProperty("user.name"));
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("Name"),
+                    "first-printer-name",
+                    "",
+                    list.get(id - 1));
+            Cups.INSTANCE.ippAddInteger(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("Integer"),
+                    "limit",
+                    1);
+            Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
+
+            Pointer attr = Cups.INSTANCE.ippFindAttribute(response, "printer-state",
+                    Cups.INSTANCE.ippTagValue("enum"));
+            String message = "Status Enum: ";
+            message += Cups.INSTANCE.ippEnumString("printer-state", Cups.INSTANCE.ippGetInteger(attr, 0));
+
+            message += "\nStatus Message: ";
+            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-message",
+                    Cups.INSTANCE.ippTagValue("TextWithoutLanguage"));
+            message += parseAttr(attr);
+
+            message += "\nStatus Reason: ";
+            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-reasons",
+                    Cups.INSTANCE.ippTagValue("keyword"));
+            message += parseAttr(attr);
+
+            System.out.println(message);
+
+            Cups.INSTANCE.ippDelete(response);
         } else {
             System.out.println("Input out of bounds");
         }
     }
+
+    static void listJobs(){
+        ArrayList<String> list = getPrinterNameList();
+        displayList(list);
+        System.out.println("Enter printer number");
+        Scanner s = new Scanner(System.in);
+        int id = s.nextInt();
+        if ((id > 0)&&(id <= list.size())) {
+            Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("Get-Jobs"));
+
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("Name"),
+                    "requesting-user-name",
+                    "",
+                    System.getProperty("user.name")
+            );
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("uri"),
+                    "printer-uri",
+                    "",
+                    "ipp://localhost:" + Cups.INSTANCE.ippPort() + "/printers/" + list.get(id - 1));
+
+            Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
+            System.out.println("ipp://localhost:" + Cups.INSTANCE.ippPort() + "/printers/" + list.get(id - 1));
+            parseResponse(response);
+
+            Cups.INSTANCE.ippDelete(response);
+        } else {
+            System.out.println("Input out of bounds");
+        }
+    }
+
+    static void getJobInfo() {
+        System.out.println("Enter job number");
+        Scanner s = new Scanner(System.in);
+        int id = s.nextInt();
+
+        Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("Get-Job-Attributes"));
+
+        Cups.INSTANCE.ippAddString(request,
+                Cups.INSTANCE.ippTagValue("Operation"),
+                Cups.INSTANCE.ippTagValue("Name"),
+                "requesting-user-name",
+                "",
+                System.getProperty("user.name")
+        );
+        Cups.INSTANCE.ippAddString(request,
+                Cups.INSTANCE.ippTagValue("Operation"),
+                Cups.INSTANCE.ippTagValue("uri"),
+                "job-uri",
+                "",
+                "ipp://localhost:" + id + "/jobs/" + id);
+
+        Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
+        parseResponse(response);
+
+        Cups.INSTANCE.ippDelete(response);
+    }
+
+    static void getDetailedPrinterInfo() {
+        ArrayList<String> list = getPrinterNameList();
+        displayList(list);
+        System.out.println("Enter printer number");
+        Scanner s = new Scanner(System.in);
+        int id = s.nextInt();
+        if ((id > 0)&&(id <= list.size())) {
+            Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("CUPS-Get-Printers"));
+
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("Name"),
+                    "requesting-user-name",
+                    "",
+                    System.getProperty("user.name"));
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("Name"),
+                    "first-printer-name",
+                    "",
+                    list.get(id - 1));
+            Cups.INSTANCE.ippAddInteger(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("Integer"),
+                    "limit",
+                    1);
+            Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
+            parseResponse(response);
+
+            Cups.INSTANCE.ippDelete(response);
+        } else {
+            System.out.println("Input out of bounds");
+        }
+    }
+
+    static void displayList(ArrayList<String> list) {
+        int counter = 0;
+        for (String s : list) System.out.println("" + ++counter + ": " + s);
+    }
+
+    static ArrayList<String> getPrinterNameList() {
+        ArrayList<String> list = new ArrayList<>();
+        Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("CUPS-Get-Printers"));
+
+        Cups.INSTANCE.ippAddString(request,
+                Cups.INSTANCE.ippTagValue("Operation"),
+                Cups.INSTANCE.ippTagValue("Name"),
+                "requesting-user-name",
+                "",
+                System.getProperty("user.name"));
+        Cups.INSTANCE.ippAddStrings(request,
+                Cups.INSTANCE.ippTagValue("Operation"),
+                Cups.INSTANCE.ippTagValue("Keyword"),
+                "requested-attributes",
+                1,
+                "",
+                new StringArray(new String[]{"printer-name"}));
+        Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
+        Pointer attr = Cups.INSTANCE.ippFindAttribute(response, "printer-name",
+                Cups.INSTANCE.ippTagValue("Name"));
+
+        while (attr != Pointer.NULL) {
+            list.add(Cups.INSTANCE.ippGetString(attr, 0, ""));
+            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-name",
+                    Cups.INSTANCE.ippTagValue("Name"));
+        }
+
+        Cups.INSTANCE.ippDelete(response);
+        return list;
+    }
+
     static void parseResponse(Pointer response) {
         Pointer attr = Cups.INSTANCE.ippFirstAttribute(response);
         while (true) {
@@ -178,6 +383,7 @@ public class Main {
         }
         System.out.println("------------------------");
     }
+
     static String parseAttr(Pointer attr){
         int valueTag = Cups.INSTANCE.ippGetValueTag(attr);
         int attrCount = Cups.INSTANCE.ippGetCount(attr);

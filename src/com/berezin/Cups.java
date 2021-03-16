@@ -11,8 +11,11 @@ public interface Cups extends Library {
     Pointer cupsEncryption();
     Pointer httpConnectEncrypt(String host, int port, Pointer encryption);
     Pointer cupsDoRequest(Pointer http, Pointer request, String resource);
+    Pointer ippNew();
     Pointer ippNewRequest(int op);
     Pointer ippGetString(Pointer attr, int element, Pointer dataLen);
+    Pointer ippSetOperation(Pointer ipp, int op);
+    Pointer ippSetRequestId(Pointer ipp, int request_id);
     Pointer ippFirstAttribute(Pointer ipp);
     Pointer ippNextAttribute(Pointer ipp);
     Pointer ippFindAttribute(Pointer ipp, String name, int type);
@@ -34,6 +37,8 @@ public interface Cups extends Library {
     int ippGetCount(Pointer attr);
     int ippGetValueTag(Pointer ipp);
     int ippGetInteger(Pointer attr, int element);
+    int ippAddStrings(Pointer ipp, int group, int value_tag, String name, int num_values, String language, StringArray values);
+
 
     void ippDelete(Pointer ipp);
     void httpClose(Pointer http);
