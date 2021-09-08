@@ -366,8 +366,9 @@ public class Main {
 
             parseResponse(response);
         }
-        finally{
+        catch (Throwable t) {
             System.out.println("error breaking stuff");
+            System.out.println(t);
         }
     }
 
