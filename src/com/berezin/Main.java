@@ -221,22 +221,6 @@ public class Main {
                     1);
             Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
 
-            Pointer attr = Cups.INSTANCE.ippFindAttribute(response, "printer-state",
-                    Cups.INSTANCE.ippTagValue("enum"));
-            String message = "Status Enum: ";
-            message += Cups.INSTANCE.ippEnumString("printer-state", Cups.INSTANCE.ippGetInteger(attr, 0));
-
-            message += "\nStatus Message: ";
-            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-message",
-                    Cups.INSTANCE.ippTagValue("TextWithoutLanguage"));
-            message += parseAttr(attr);
-
-            message += "\nStatus Reason: ";
-            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-state-reasons",
-                    Cups.INSTANCE.ippTagValue("keyword"));
-            message += parseAttr(attr);
-
-            System.out.println(message);
 
             Cups.INSTANCE.ippDelete(response);
         } else {
@@ -360,7 +344,7 @@ public class Main {
                     Cups.INSTANCE.ippTagValue("mimetype"),
                     "document-format",
                     null,
-                    "text/plain");
+                    "application/vnd.cups-raw");
             // request is automatically closed
             Pointer response = Cups.INSTANCE.cupsDoFileRequest(http, request, "/ipp/print", "zpl_sample.txt");
 
@@ -395,54 +379,16 @@ public class Main {
                 "",
                 new StringArray(new String[]{"printer-name"}));
         Pointer response = Cups.INSTANCE.cupsDoRequest(http, request, "/");
-        Pointer attr = Cups.INSTANCE.ippFindAttribute(response, "printer-name",
-                Cups.INSTANCE.ippTagValue("Name"));
 
-        while (attr != Pointer.NULL) {
-            list.add(Cups.INSTANCE.ippGetString(attr, 0, ""));
-            attr = Cups.INSTANCE.ippFindNextAttribute(response, "printer-name",
-                    Cups.INSTANCE.ippTagValue("Name"));
-        }
 
         Cups.INSTANCE.ippDelete(response);
         return list;
     }
 
     static void parseResponse(Pointer response) {
-        Pointer attr = Cups.INSTANCE.ippFirstAttribute(response);
-        while (true) {
-            if (attr == Pointer.NULL) {
-                break;
-            }
-            System.out.println(parseAttr(attr));
-            attr = Cups.INSTANCE.ippNextAttribute(response);
-        }
-        System.out.println("------------------------");
     }
 
     static String parseAttr(Pointer attr){
-        int valueTag = Cups.INSTANCE.ippGetValueTag(attr);
-        int attrCount = Cups.INSTANCE.ippGetCount(attr);
-        String data = "";
-        String attrName = Cups.INSTANCE.ippGetName(attr);
-        for (int i = 0; i < attrCount; i++) {
-            if (valueTag == Cups.INSTANCE.ippTagValue("Integer")) {
-                data += Cups.INSTANCE.ippGetInteger(attr, i);
-            } else if (valueTag == Cups.INSTANCE.ippTagValue("Boolean")) {
-                data += (Cups.INSTANCE.ippGetInteger(attr, i) == 1);
-            } else if (valueTag == Cups.INSTANCE.ippTagValue("Enum")) {
-                data += Cups.INSTANCE.ippEnumString(attrName, Cups.INSTANCE.ippGetInteger(attr, i));
-            } else {
-                data += Cups.INSTANCE.ippGetString(attr, i, "");
-            }
-            if (i + 1 < attrCount) {
-                data += ", ";
-            }
-        }
-
-        if (attrName == null){
-            return "------------------------";
-        }
-        return String.format("%s: %d %s {%s}", attrName, attrCount, Cups.INSTANCE.ippTagString(valueTag), data);
+        return "";
     }
 }
