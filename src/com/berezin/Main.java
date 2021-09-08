@@ -344,7 +344,7 @@ public class Main {
                     Cups.INSTANCE.ippTagValue("mimetype"),
                     "document-format",
                     null,
-                    "application/vnd.cups-raw");
+                    "text/plain");
             // request is automatically closed
             Pointer response = Cups.INSTANCE.cupsDoFileRequest(http, request, "/ipp/print", "zpl_sample.txt");
 
