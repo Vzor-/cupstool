@@ -11,6 +11,7 @@ public interface Cups extends Library {
     Pointer cupsEncryption();
     Pointer httpConnectEncrypt(String host, int port, Pointer encryption);
     Pointer cupsDoRequest(Pointer http, Pointer request, String resource);
+    Pointer cupsDoFileRequest(Pointer http, Pointer request, String resource, String filename);
     Pointer ippNew();
     Pointer ippNewRequest(int op);
     Pointer ippGetString(Pointer attr, int element, Pointer dataLen);

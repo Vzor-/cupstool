@@ -3,6 +3,7 @@ package com.berezin;
 import com.sun.jna.Pointer;
 import com.sun.jna.StringArray;
 
+import javax.print.PrintException;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -22,7 +23,8 @@ public class Main {
                 else if (item == 5) listJobs();
                 else if (item == 6) getJobInfo();
                 else if (item == 7) getDetailedPrinterInfo();
-                else if (item == 8) break;
+                else if (item == 8) breakStuff();
+                else if (item == 9) break;
                 else System.out.println("Invalid input");
             } catch (Exception e) {
                 System.out.println("err");
@@ -39,7 +41,8 @@ public class Main {
         System.out.println("5: List jobs");
         System.out.println("6: Get detailed job info");
         System.out.println("7: Get detailed printer info");
-        System.out.println("8: Exit");
+        System.out.println("8: Break stuff");
+        System.out.println("9: Exit");
         Scanner s = new Scanner(System.in);
         return s.nextInt();
     }
@@ -333,6 +336,38 @@ public class Main {
             Cups.INSTANCE.ippDelete(response);
         } else {
             System.out.println("Input out of bounds");
+        }
+    }
+
+    static void breakStuff() {
+        Pointer fileResponse = null;
+        try {
+            Pointer request = Cups.INSTANCE.ippNewRequest(Cups.INSTANCE.ippOpValue("Print-Job"));
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("uri"),
+                    "printer-uri",
+                    "",
+                    "ipp://localhost:631/printers/Zebra");
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("Name"),
+                    "requesting-user-name",
+                    "",
+                    System.getProperty("user.name"));
+            Cups.INSTANCE.ippAddString(request,
+                    Cups.INSTANCE.ippTagValue("Operation"),
+                    Cups.INSTANCE.ippTagValue("mimetype"),
+                    "document-format",
+                    null,
+                    "application/vnd.cups-raw");
+            // request is automatically closed
+            Pointer response = Cups.INSTANCE.cupsDoFileRequest(http, request, "/ipp/print", "/Users/kyleb/tray-kyle/assets/zpl_sample.txt");
+
+            parseResponse(response);
+        }
+        finally{
+            System.out.println("error breaking stuff");
         }
     }
 
