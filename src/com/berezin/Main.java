@@ -362,7 +362,7 @@ public class Main {
                     null,
                     "application/vnd.cups-raw");
             // request is automatically closed
-            Pointer response = Cups.INSTANCE.cupsDoFileRequest(http, request, "/ipp/print", "/Users/kyleb/tray-kyle/assets/zpl_sample.txt");
+            Pointer response = Cups.INSTANCE.cupsDoFileRequest(http, request, "/ipp/print", "zpl_sample.txt");
 
             parseResponse(response);
         }
